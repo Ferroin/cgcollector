@@ -246,7 +246,7 @@ def _collectd_submit(config, queue):
                 stats = '{0}:{1}'.format(*data[2])
             elif data[3] == _TYPE_BLKIO_IOPS:
                 plugin = config['plugin'] + 'blkio'
-                datatype = 'cgstats_blk_iops'
+                datatype = 'cgstats_blk_ops'
                 stats = '{0}:{1}'.format(*data[2])
             else:
                 logging.warning('Unknown data sample type, dropping sample.')
@@ -255,11 +255,11 @@ def _collectd_submit(config, queue):
                 sanitized[data[1]] = data[1].lstrip('/').replace('.', '_').replace('-', '_').replace('/', '_')
             instance = sanitized[data[1]]
             msghead = 'PUTVAL {0}/{1}-{2}/{3}'.format(host, plugin, instance, datatype)
-            msgdata = '{0}:{1}'.format(data[0], stats)
+            msgdata = '{0}:{1}'.format(int(data[0]), stats)
             message = '{0} {1}\n'.format(msghead, msgdata)
             logging.debug('Sending: %s', message)
             sock.sendall(message.encode())
-            result = sock.recv(4096).decode()
+            result = sock.recv(256).decode()
             if not result.startswith('0 Success'):
                 logging.warning('Error sending data to collectd: %s', result)
 
@@ -361,16 +361,15 @@ def trigger(scheduler, config, pool, submit, queue, pdata):
         for group in groups:
             logging.debug('Dispatching collection for %s in %s controller', group, 'pids')
             pool.apply(collect_pids, (group, config, queue))
+    groups = expand_groups(config['blkio']['groups'], config['blkio']['path'])
     if 'blkio' in config.keys() and config['blkio']['report-octets']:
-        groups = expand_groups(config['blkio']['groups'], config['blkio']['path'])
         for group in groups:
-            logging.debug('Dispatching collection for %s in %s controller', group, 'blkio_octets')
-            pool.apply(collect_blkio_octets, (group, config, queue))
-    if 'blkio' in config.keys() and config['blkio']['report-iops']:
-        groups = expand_groups(config['blkio']['groups'], config['blkio']['path'])
-        for group in groups:
-            logging.debug('Dispatching collection for %s in %s controller', group, 'blkio_iops')
-            pool.apply(collect_blkio_octets, (group, config, queue))
+            if config['blkio']['report-octets']:
+                logging.debug('Dispatching collection for %s in %s controller', group, 'blkio_octets')
+                pool.apply(collect_blkio_octets, (group, config, queue))
+            if config['blkio']['report-iops']:
+                logging.debug('Dispatching collection for %s in %s controller', group, 'blkio_iops')
+                pool.apply(collect_blkio_iops, (group, config, queue))
     return True
 
 def _sighandler(signum, frame):
