@@ -1,0 +1,111 @@
+---
+# Example configuration for cg-collector
+#
+# Syntax is YAML 1.2
+
+# 'period' configures how often data is collected in seconds.  If this is
+# too short, then the queue will fill up and data points will be dropped.
+# Note that the first collection will occur almost immediately after
+# initialization finishes, and then subsequent collections will occur at
+# this interval.  This is a mandatory option.
+period: 60
+
+# 'socket' specifies where the collectd socket is.  This should match
+# up with the unixsock plugin configuration for collectd.  THis is a
+# mandatory option.
+socket: /run/collectd/collectd.sock
+
+# 'queue-size' configures how big the internal data queue is.  This should
+# be at least a little more than the total number of cgroups you plan to
+# monitor times the number of controllers you plan to monitor.
+# The default is 256, which should be sufficient for monitoring all four
+# types of data cg-collector can track across 50 cgroups on a reasonably
+# fast system.  If this is too low, the queue will fill up and metrics
+# will be dropped.
+#queue-size: 256
+
+# cg-collector uses a process-pool to parallelize collection of data.
+# The 'parallel' option controls how many processes to use for this.
+# If left unset, then use either the total number of groups to monitor or
+# the number of PU's in it's scheduling mask, whichever is lower.
+# With limited exceptions, you probably want the default behavior.
+#parallel: 1
+
+# The 'plugin' option specifies what to use as the prefix for the plugin
+# name.  This gets prepended to the name of the controller that is being
+# collected to create the plugin name that is passed to collectd.
+# This can only have letters, numbers, and underscores, otherwise collectd
+# will complain.  The default is 'cg_' if this isn't specified in the
+# config file.
+#plugin: cg_
+
+# The 'host' option specifies what hostname to report to collectd.
+# By default this is determined from the local system's host name at
+# startup.
+#host: localhost
+
+# The 'groups' block is a list of cgroups to monitor in all enabled
+# controllers.  Each item is a path relative to the root of the
+# controller's heirarchy to collect data from.  In the event that no
+# data is present for a controller, no data will be stored for that group,
+# but no warning will be logged either.
+#groups:
+#  - foo
+#  - bar/baz
+
+# There are a total of four different controllers we can collect data from:
+# cpuacct, memory, blkio, and pids
+# Each controller has it's own configuration block, cpuacct uses the
+# 'cpu' block, memory uses the 'mem' block, blkio uses the 'blkio' block,
+# and pids uses the 'pids' block.  There are two arguments common to all
+# blocks, 'path' and 'groups'.  The 'path' parameter specifies the
+# path to that particular controller's heirarchy.  The default is
+# /sys/fs/cgroup/<controller>, which should work on most cgroup-v1
+# systems.  'groups' is a list of cgroups to watch in addition to the ones
+# listed in the global 'groups' section.
+#
+# The 'cpu' block takes three additional (optional) parameters,
+# 'report-time', 'report-percent', and 'global-percent'.
+# If 'report-time' is true (the default), then the amount of CPU time
+# consumed in each period will be recorded.
+# If 'report-percent' is true (it defaults to false), then the percentage
+# of CPU time consumed will be recorded.
+# If 'global-percent' is true (it is also false by default), then the
+# percentages recorded will be relative to the total number of CPU's in the
+# system when the data is collected, otherwise it will be relative to one
+# CPU (and can thus be higher than 100 on systems with more than one CPU).
+#cpu:
+#  path: /sys/fs/cgroup/cpuacct
+#  report-time: true
+#  report-percent: false
+#  global-percent: false
+#  groups:
+#    - foo
+#    - bar/baz
+#
+#mem:
+#  path: /sys/fs/cgroup/memory
+#  groups:
+#    - foo
+#    - bar/baz
+#
+# The 'blkio' block takes two additional paraeters, 'report-octets' and
+# 'report-iops'.
+# If 'report-octets' is true (the default), then the number of bytes of
+# data processed per second will be recorded.
+# If 'report-iops' is true (also the default), then the number of
+# operations per second will be recorded.
+#blkio:
+#  path: /sys/fs/cgroup/blkio
+#  report-octets: true
+#  report-iops: true
+#  groups:
+#    - foo
+#    - bar/baz
+#
+#pids:
+#  path: /sys/fs/cgroup/pids
+#  groups:
+#    - foo
+#    - bar/baz
+...

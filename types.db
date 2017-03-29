@@ -1,0 +1,6 @@
+cgstats_blk_octets      read:DERIVE:0:U, write:DERIVE:0:U
+cgstats_blk_ops         read:DERIVE:0:U, write:DERIVE:0:U
+cgstats_cpu_percent     system:GAUGE:0:U, user:GAUGE:0:U
+cgstats_cpu             system:DERIVE:0:U, user:DERIVE:0:U
+cgstats_mem             normal:GAUGE:0:U, swap:GAUGE:0:U, kernel:GAUGE:0:U
+cgstats_pid             count:GAUGE:0:U
