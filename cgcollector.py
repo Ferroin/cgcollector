@@ -5,6 +5,7 @@ import logging
 import multiprocessing as mp
 import os
 import sched
+import signal
 import socket
 import sys
 import time
@@ -29,6 +30,24 @@ _CONTROLLERS = [
     'mem',
     'blkio',
     'pids'
+]
+
+# This is a list of signals we catch and die on.
+_CATCH_SIGNALS = [
+    signal.SIGQUIT,
+    signal.SIGABRT,
+    signal.SIGALRM,
+    signal.SIGTERM,
+    signal.SIGCHLD,
+    signal.SIGVTALRM,
+    signal.SIGPROF
+]
+
+# And this lists ones we explicitly ignore.
+_IGNORE_SIGNALS = [
+    signal.SIGHUP,
+    signal.SIGUSR1,
+    signal.SIGUSR2
 ]
 
 def _rusleep():
@@ -354,8 +373,19 @@ def trigger(scheduler, config, pool, submit, queue, pdata):
             pool.apply(collect_blkio_octets, (group, config, queue))
     return True
 
+def _sighandler(signum, frame):
+    '''Handle most fatal signals.'''
+    pool.close()
+    pool.join()
+    if submit.is_alive():
+        submit.terminate()
+    submit.join()
+    sys.exit(0)
+
 def run(config):
     '''Main program logic.'''
+    global submit
+    global pool
     ob = mp.Manager()
     queue = ob.Queue(config['queue-size'])
     pdata = ob.dict()
@@ -370,6 +400,10 @@ def run(config):
     # process is still running, so this will block until either we get hit
     # with a fatal signal, or the submission process dies for some reason,
     # at which point we clean up and exit.
+    for item in _IGNORE_SIGNALS:
+        signal.signal(item, signal.SIG_IGN)
+    for item in _CATCH_SIGNALS:
+        signal.signal(item, _sighandler)
     try:
         scheduler.run(blocking=True)
     finally:
